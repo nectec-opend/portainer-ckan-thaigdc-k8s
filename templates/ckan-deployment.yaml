@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ckan.fullname" . }}
+spec:
+  replicas: 1
+
+  strategy:
+    type: Recreate
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "ckan.fullname" . }}
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "ckan.fullname" . }}
+
+    spec:
+      containers:
+        - name: ckan
+
+          image: "{{ .Values.ckan.image.repository }}:{{ .Values.ckan.image.tag }}"
+          imagePullPolicy: {{ .Values.ckan.image.pullPolicy }}
+
+          ports:
+            - name: http
+              containerPort: 5000
+
+          envFrom:
+            - configMapRef:
+                name: {{ include "ckan.fullname" . }}-config
+
+          env:
+            - name: CKAN_SYSADMIN_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ckan.fullname" . }}-secret
+                  key: CKAN_SYSADMIN_NAME
+
+            - name: CKAN_SYSADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ckan.fullname" . }}-secret
+                  key: CKAN_SYSADMIN_PASSWORD
+
+            - name: CKAN_SYSADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ckan.fullname" . }}-secret
+                  key: CKAN_SYSADMIN_EMAIL
+
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ckan.fullname" . }}-secret
+                  key: POSTGRES_USER
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ckan.fullname" . }}-secret
+                  key: POSTGRES_PASSWORD
+
+            - name: DATASTORE_READONLY_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ckan.fullname" . }}-secret
+                  key: DATASTORE_READONLY_USER
+
+            - name: DATASTORE_READONLY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ckan.fullname" . }}-secret
+                  key: DATASTORE_READONLY_PASSWORD
+
+            - name: CKAN_SQLALCHEMY_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_SERVER):$(POSTGRES_PORT)/$(POSTGRES_USER)"
+
+            - name: CKAN_DATASTORE_WRITE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_SERVER):$(POSTGRES_PORT)/datastore_$(AGENT)"
+
+            - name: CKAN_DATASTORE_READ_URL
+              value: "postgresql://$(DATASTORE_READONLY_USER):$(DATASTORE_READONLY_PASSWORD)@$(POSTGRES_SERVER):$(POSTGRES_PORT)/datastore_$(AGENT)"
+
+            - name: CKANEXT__XLOADER__JOBS_DB__URI
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_SERVER):$(POSTGRES_PORT)/$(POSTGRES_USER)"
+
+            - name: CKAN_SOLR_URL
+              value: "http://$(SOLR_SERVER):$(SOLR_PORT)/solr/ckan_$(AGENT)"
+
+            - name: CKAN_REDIS_URL
+              value: "redis://{{ include "ckan.fullname" . }}-redis:6379/0"
+
+          resources:
+{{ toYaml .Values.ckan.resources | indent 12 }}
+
+          volumeMounts:
+            - name: ckan-storage
+              mountPath: /var/lib/ckan
+
+            - name: ckan-config
+              mountPath: /srv/app/conf
+
+      volumes:
+        - name: ckan-storage
+          persistentVolumeClaim:
+            claimName: {{ include "ckan.fullname" . }}-storage
+
+        - name: ckan-config
+          persistentVolumeClaim:
+            claimName: {{ include "ckan.fullname" . }}-config-storage
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+
+      {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+
+      {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+      {{- end }}

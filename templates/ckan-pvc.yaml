@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ckan.fullname" . }}-storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+
+  {{- if .Values.ckan.storage.storageClass }}
+  storageClassName: {{ .Values.ckan.storage.storageClass | quote }}
+  {{- end }}
+
+  resources:
+    requests:
+      storage: {{ .Values.ckan.storage.size }}
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ckan.fullname" . }}-config-storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+
+  {{- if .Values.ckan.configStorage.storageClass }}
+  storageClassName: {{ .Values.ckan.configStorage.storageClass | quote }}
+  {{- end }}
+
+  resources:
+    requests:
+      storage: {{ .Values.ckan.configStorage.size }}

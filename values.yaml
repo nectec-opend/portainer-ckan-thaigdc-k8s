@@ -1,0 +1,85 @@
+nameOverride: ""
+fullnameOverride: ""
+
+ckan:
+  image:
+    repository: thepaeth/ckan-thai_gdc
+    tag: "v3.1.0"
+    pullPolicy: IfNotPresent
+
+  agent: "agency"
+
+  siteUrl: "https://data.example.go.th"
+
+  sysadmin:
+    name: "ckan_admin"
+    password: ""
+    email: "admin@example.go.th"
+
+  plugins: >-
+    thaigdc2fa thai_gdc showcase stats opendstats activity image_view datatables_view text_view webpage_view resource_proxy geo_view geojson_view shp_view xloader datastore pdf_view dcat dcat_json_interface structured_data scheming_datasets hierarchy_display hierarchy_form envvars
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 2056Mi
+
+  storage:
+    size: 20Gi
+    storageClass: ""
+
+  configStorage:
+    size: 1Gi
+    storageClass: ""
+
+postgres:
+  server: "192.168.45.74"
+  port: 5432
+
+  user: "ckan_agency"
+  password: ""
+
+  datastore:
+    user: "datastore_agency"
+    password: ""
+
+solr:
+  enabled: true
+
+  image:
+    repository: ckan/ckan-solr
+    tag: "2.10-solr8"
+    pullPolicy: IfNotPresent
+
+  port: 8983
+
+  storage:
+    enabled: true
+    size: 2Gi
+    storageClass: ""
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 2Gi
+
+redis:
+  image:
+    repository: redis
+    tag: alpine
+
+  storage:
+    size: 2Gi
+    storageClass: ""
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
