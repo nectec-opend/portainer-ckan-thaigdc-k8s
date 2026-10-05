@@ -1,0 +1,434 @@
+# ============================================================
+# CKAN SECRET
+# ============================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ckan-secret
+type: Opaque
+stringData:
+  POSTGRES_USER: "${POSTGRES_USER}"
+  POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+
+  DATASTORE_READONLY_USER: "${DATASTORE_READONLY_USER}"
+  DATASTORE_READONLY_PASSWORD: "${DATASTORE_READONLY_PASSWORD}"
+
+  CKAN_SYSADMIN_NAME: "${CKAN_SYSADMIN_NAME}"
+  CKAN_SYSADMIN_PASSWORD: "${CKAN_SYSADMIN_PASSWORD}"
+  CKAN_SYSADMIN_EMAIL: "${CKAN_SYSADMIN_EMAIL}"
+
+---
+# ============================================================
+# CKAN CONFIG
+# ============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ckan-config
+data:
+  CKAN_SITE_URL: "${DEFAULT_URL}"
+  CKAN_SITE_ID: "default"
+  CKAN_PORT: "5000"
+
+  AGENT: "${AGENT}"
+
+  POSTGRES_SERVER: "${POSTGRES_SERVER}"
+  POSTGRES_PORT: "${POSTGRES_PORT}"
+
+  TZ: "Asia/Bangkok"
+
+  CKAN__PLUGINS: "${CKAN_PLUGINS}"
+
+  CKAN__HARVEST__MQ__TYPE: "redis"
+  CKAN__HARVEST__MQ__HOSTNAME: "redis"
+  CKAN__HARVEST__MQ__PORT: "6379"
+  CKAN__HARVEST__MQ__REDIS_DB: "0"
+
+  CKAN__VIEWS__DEFAULT_VIEWS: "image_view datatables_view text_view webpage_view pdf_view geo_view geojson_view webpage_view shp_view wmts_view"
+
+  CKAN__TRACKING_ENABLED: "True"
+
+  CKAN__AUTH__USER_DELETE_GROUPS: "False"
+  CKAN__AUTH__USER_DELETE_ORGANIZATIONS: "False"
+  CKAN__AUTH__PUBLIC_USER_DETAILS: "False"
+
+  CKAN__ACTIVITY_STREAMS_ENABLED: "True"
+
+  CKAN___THAI_GDC__IS_AS_A_SERVICE: "true"
+
+  CKANEXT__GEOVIEW__OL_VIEWER__FORMATS: "wms wfs kml geojson gml arcgis_rest"
+  CKANEXT__GEOVIEW__SHP_VIEWER__SRID: "4326"
+  CKANEXT__GEOVIEW__SHP_VIEWER__ENCODING: "UTF-8"
+
+  CKANEXT__SPATIAL__COMMON_MAP__TYPE: "custom"
+  CKANEXT__SPATIAL__COMMON_MAP__CUSTOM__URL: "http://tile.openstreetmap.org/{z}/{x}/{y}.png"
+  CKANEXT__SPATIAL__COMMON_MAP__ATTRIBUTION: "Map tiles & Data by OpenStreetMap, under CC BY SA."
+
+  CKAN__DATASTORE__SQLSEARCH__ENABLED: "False"
+
+  CKAN___SCHEMING__DATASET_SCHEMAS: "ckanext.thai_gdc:ckan_dataset.json"
+  CKAN___SCHEMING__PRESETS: "ckanext.thai_gdc:presets.json"
+
+  CKANEXT__XLOADER__JUST_LOAD_WITH_MESSYTABLES: "true"
+  CKANEXT__XLOADER__SSL_VERIFY: "false"
+
+  CKAN__DATATABLES__STATE_SAVING: "false"
+
+  CKAN__LOCALES_OFFERED: "th en"
+
+  CKAN__UPLOAD__ADMIN__MIMETYPES: "*"
+  CKAN__UPLOAD__ADMIN__TYPES: "*"
+
+  CKANEXT__SHOWCASE__EDITOR: "ckeditor"
+
+  CKAN__UPLOAD__SHOWCASE__TYPES: "image"
+  CKAN__UPLOAD__SHOWCASE__MIMETYPES: "image/jpeg image/png image/gif image/svg+xml"
+
+  CKAN_MAX_UPLOAD_SIZE_MB: "100"
+
+---
+# ============================================================
+# CKAN STORAGE
+# ============================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ckan-storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+# ============================================================
+# CKAN CONFIG STORAGE
+# ============================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ckan-config-storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+# ============================================================
+# REDIS STORAGE
+# ============================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+# ============================================================
+# SOLR STORAGE
+# ============================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: solr-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+# ============================================================
+# REDIS
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+
+spec:
+  replicas: 1
+
+  strategy:
+    type: Recreate
+
+  selector:
+    matchLabels:
+      app: redis
+
+  template:
+    metadata:
+      labels:
+        app: redis
+
+    spec:
+      containers:
+        - name: redis
+          image: redis:alpine
+
+          args:
+            - redis-server
+            - --appendonly
+            - "yes"
+
+          ports:
+            - containerPort: 6379
+              name: redis
+
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-data
+
+---
+# ============================================================
+# REDIS SERVICE
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: redis
+
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+
+---
+# ============================================================
+# SOLR
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: solr
+
+spec:
+  replicas: 1
+
+  strategy:
+    type: Recreate
+
+  selector:
+    matchLabels:
+      app: solr
+
+  template:
+    metadata:
+      labels:
+        app: solr
+
+    spec:
+      containers:
+        - name: solr
+          image: ckan/ckan-solr:${SOLR_VERSION}
+
+          ports:
+            - containerPort: 8983
+              name: solr
+
+          volumeMounts:
+            - name: solr-data
+              mountPath: /var/solr
+
+      volumes:
+        - name: solr-data
+          persistentVolumeClaim:
+            claimName: solr-data
+
+---
+# ============================================================
+# SOLR SERVICE
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: solr
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: solr
+
+  ports:
+    - name: solr
+      port: 8983
+      targetPort: 8983
+
+---
+# ============================================================
+# CKAN
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ckan
+
+spec:
+  replicas: 1
+
+  strategy:
+    type: Recreate
+
+  selector:
+    matchLabels:
+      app: ckan
+
+  template:
+    metadata:
+      labels:
+        app: ckan
+
+    spec:
+      containers:
+        - name: ckan
+
+          image: thepaeth/ckan-thai_gdc:${CKAN_VERSION}
+
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 5000
+
+          envFrom:
+            - configMapRef:
+                name: ckan-config
+
+          env:
+            # ---------------------------
+            # Secrets
+            # ---------------------------
+
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ckan-secret
+                  key: POSTGRES_USER
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ckan-secret
+                  key: POSTGRES_PASSWORD
+
+            - name: DATASTORE_READONLY_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ckan-secret
+                  key: DATASTORE_READONLY_USER
+
+            - name: DATASTORE_READONLY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ckan-secret
+                  key: DATASTORE_READONLY_PASSWORD
+
+            - name: CKAN_SYSADMIN_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: ckan-secret
+                  key: CKAN_SYSADMIN_NAME
+
+            - name: CKAN_SYSADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ckan-secret
+                  key: CKAN_SYSADMIN_PASSWORD
+
+            - name: CKAN_SYSADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: ckan-secret
+                  key: CKAN_SYSADMIN_EMAIL
+
+            # ---------------------------
+            # CKAN connections
+            # ---------------------------
+
+            - name: CKAN_SQLALCHEMY_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_SERVER):$(POSTGRES_PORT)/$(POSTGRES_USER)"
+
+            - name: CKAN_DATASTORE_WRITE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_SERVER):$(POSTGRES_PORT)/datastore_$(AGENT)"
+
+            - name: CKAN_DATASTORE_READ_URL
+              value: "postgresql://$(DATASTORE_READONLY_USER):$(DATASTORE_READONLY_PASSWORD)@$(POSTGRES_SERVER):$(POSTGRES_PORT)/datastore_$(AGENT)"
+
+            - name: CKANEXT__XLOADER__JOBS_DB__URI
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_SERVER):$(POSTGRES_PORT)/$(POSTGRES_USER)"
+
+            - name: CKAN_SOLR_URL
+              value: "http://solr:8983/solr/ckan"
+
+            - name: CKAN_REDIS_URL
+              value: "redis://redis:6379/0"
+
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+
+            limits:
+              cpu: "1"
+              memory: 2056Mi
+
+          volumeMounts:
+            - name: ckan-storage
+              mountPath: /var/lib/ckan
+
+            - name: ckan-config
+              mountPath: /srv/app/conf
+
+      volumes:
+        - name: ckan-storage
+          persistentVolumeClaim:
+            claimName: ckan-storage
+
+        - name: ckan-config
+          persistentVolumeClaim:
+            claimName: ckan-config-storage
+
+---
+# ============================================================
+# CKAN SERVICE
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: ckan
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: ckan
+
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000

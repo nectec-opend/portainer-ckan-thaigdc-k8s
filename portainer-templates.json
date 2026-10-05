@@ -1,0 +1,93 @@
+{
+  "version": "2",
+  "templates": [
+    {
+      "type": 3,
+      "title": "CKAN Thai GDC for K8s",
+      "description": "Deploy CKAN Thai GDC on Kubernetes",
+      "categories": [
+        "CKAN",
+        "CMS"
+      ],
+      "platform": "linux",
+      "logo": "",
+      "repository": {
+        "url": "https://github.com/nectec-opend/portainer-ckan-thaigdc-k8s",
+        "stackfile": "manifest.yaml"
+      },
+      "env": [
+        {
+          "name": "AGENT",
+          "label": "Agency name",
+          "description": "Agency identifier",
+          "default": "agency"
+        },
+        {
+          "name": "DEFAULT_URL",
+          "label": "Default URL",
+          "description": "CKAN site URL"
+        },
+        {
+          "name": "POSTGRES_SERVER",
+          "label": "PostgreSQL Server",
+          "description": "PostgreSQL service name, hostname or IP address",
+          "default": "db-pilot"
+        },
+        {
+          "name": "POSTGRES_PORT",
+          "label": "PostgreSQL Port",
+          "default": "5432"
+        },
+        {
+          "name": "POSTGRES_USER",
+          "label": "PostgreSQL User",
+          "default": "ckan_agency"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "label": "PostgreSQL Password",
+          "description": "Password for CKAN PostgreSQL user"
+        },
+        {
+          "name": "DATASTORE_READONLY_USER",
+          "label": "Datastore Readonly User",
+          "default": "datastore_agency"
+        },
+        {
+          "name": "DATASTORE_READONLY_PASSWORD",
+          "label": "Datastore Readonly Password"
+        },
+        {
+          "name": "CKAN_VERSION",
+          "label": "CKAN Version",
+          "default": "v3.1.0"
+        },
+        {
+          "name": "SOLR_VERSION",
+          "label": "Solr Version",
+          "default": "2.10-solr8"
+        },
+        {
+          "name": "CKAN_SYSADMIN_NAME",
+          "label": "CKAN Sysadmin Name",
+          "default": "ckan_admin"
+        },
+        {
+          "name": "CKAN_SYSADMIN_PASSWORD",
+          "label": "CKAN Sysadmin Password"
+        },
+        {
+          "name": "CKAN_SYSADMIN_EMAIL",
+          "label": "CKAN Sysadmin Email",
+          "default": "admin@example.go.th"
+        },
+        {
+          "name": "CKAN_PLUGINS",
+          "label": "CKAN Plugins",
+          "description": "Space separated CKAN plugins",
+          "default": "thai_gdc showcase stats opendstats activity image_view datatables_view text_view webpage_view"
+        }
+      ]
+    }
+  ]
+}
